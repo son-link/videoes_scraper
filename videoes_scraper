@@ -1,0 +1,245 @@
+#!/usr/bin/python
+
+import xml.etree.cElementTree as ET
+import urllib2
+import urllib
+import binascii
+import glob
+import argparse
+import sys
+reload(sys)
+sys.setdefaultencoding('utf8')
+
+# Parse Arguments
+##################################################
+parser = argparse.ArgumentParser(description='video gamelist scraper for Retropie')
+parser.add_argument("-r", "--romDir",
+                    default="/home/pi/RetroPie/roms",
+                    help='rom directory')
+parser.add_argument("-i", "--imageDir",
+                    default="/opt/retropie/configs/all/emulationstation/downloaded_images",
+                    help='image directory')
+parser.add_argument("-g", "--gamelistDir",
+                    default="/opt/retropie/configs/all/emulationstation/gamelists",
+                    help='gamelist.xml directories')
+parser.add_argument("-e", "--emulatorDir",
+                    default="mame-libretro",
+#                    help='dir name of the emulator, empty -> all directories in --romDir')
+                    help='dir name of the emulator')
+parser.add_argument("-d", "--debug",
+                    default=0,
+                    help='debug level: 0-3 (default 0)')
+args = parser.parse_args()
+
+
+# ROM infos, folder name as key
+##################################################
+id = {}
+endungen = {}
+# MAME
+id["mame-libretro"] = 75
+id["arcade"]        = id["mame-libretro"]
+id["fba"]           = id["mame-libretro"] # FinalBurn Alpha
+id["mame-mame4all"] = id["mame-libretro"]
+id["mame-advmame"]  = id["mame-libretro"]
+endungen["mame-libretro"] = ["zip"] 
+endungen["arcade"]        = endungen["mame-libretro"]
+endungen["fba"]           = endungen["mame-libretro"] # FinalBurn Alpha
+endungen["mame-mame4all"] = endungen["mame-libretro"]
+endungen["mame-advmame"]  = endungen["mame-libretro"]
+# Atari 2600
+id["atari2600"] = 26
+endungen["atari2600"] = ["bin", "a26", "rom", "zip", "gz"]
+# Sega Dreamcast
+id["dreamcast"] = 23
+endungen["dreamcast"] = ["cdi", "gdi"]
+# Genesis Megadrive
+id["megadrive"] = 1
+endungen["megadrive"] = ["smd", "bin", "md", "iso"]
+# Sega Master System
+id["mastersystem"] = 2
+endungen["mastersystem"] = ["sms"]
+# Neo Geo
+id["neogeo"] = 24
+endungen["neogeo"] = ["zip"] 
+# NES
+id["nes"] = 3
+endungen["nes"] = ["zip", "nes", "smc", "sfc", "fig", "swc", "mgd"]
+# SNES
+id["snes"] = 4
+endungen["snes"] = ["zip", "smc", "sfc", "fig", "swc"]
+# N64
+id["n64"] = 14
+endungen["n64"] = ["z64", "n64", "v64"]
+# PlayStation 1
+id["psx"] = 57
+endungen["psx"] = ["cue", "cbn", "img", "iso", "m3u", "mdf", "pbp", "toc", "z", "znx"]
+# Sega 32X
+id["sega32x"] = 19
+endungen["sega32x"] = ["32x", "smd", "bin", "md"]
+# Sega CD
+id["segacd"] = 20
+endungen["segacd"] = ["cue", "iso"]
+# ZX Spectrum
+id["zxspectrum"] = 76
+endungen["zxspectrum"] = ["sna", "szx", "z80", "tap", "tzx", "gz", "udi", "mgt", "img", "trd", "scl", "dsk"]
+
+# Vars
+##################################################
+scraperUrl="http://www.screenscraper.fr/api/jeuInfos.php?devid=capsaicin&devpassword=rpivid20161125&softname=video_scraper&output=xml&"
+
+# log
+##################################################
+def log (txt, prio = 0):
+  if prio <= args.debug:
+    print txt
+
+# crs32
+##################################################
+def CRC32_from_file(filename):
+  buf = open(filename,'rb').read()
+  buf = (binascii.crc32(buf) & 0xFFFFFFFF)
+  return "%08X" % buf
+
+
+##################################################
+# Main
+##################################################
+log ("")
+romDir=args.romDir + "/" + args.emulatorDir + "/"
+log(romDir, 1)
+imageDir=args.imageDir + "/" + args.emulatorDir + "/"
+log(imageDir, 1)
+gameListFile=args.gamelistDir + "/" + args.emulatorDir + "/gamelist.xml"
+log(gameListFile, 1)
+
+output_file = open( gameListFile, 'w' )
+output_file.write( '<?xml version="1.0"?>\n' )
+output_file.write( '<gameList>\n' )
+
+# for i in iter(foo):
+for r in glob.iglob(romDir + "*.*"):
+  endung = r[-3:]
+  log ("Endung: " + endung, 2)
+  if endung not in endungen[args.emulatorDir]:
+    log("Endung nicht unterstuetzt",1)
+    continue
+  log(r)
+  f = r[r.rfind('/')+1:-4]
+  log (f,1)
+  crc = CRC32_from_file(r)
+  desc=""
+  rating=""
+  date="" 
+  developer=""
+  publisher=""
+  genre=""
+  players=""
+  try:
+    url = scraperUrl + "crc=" + crc
+    log ( "  get with crc: " + url, 1)
+    xml_doc=urllib2.urlopen(url)
+    xml_str = xml_doc.read()
+  except:
+    log ("  can not get: " + + url, 2)
+
+  if "Erreur" in xml_str:
+    log ("  Game not found, with crs32, try with file name", 1)
+    try:
+      url = scraperUrl + "systemeid=75&romnom=" + f +"." + endung
+      log ( "  get with rom name: " + url, 2)
+      xml_doc=urllib2.urlopen(url)
+      xml_str = xml_doc.read()
+      if "Erreur" in xml_str:
+        log ("  Game: " + f + " not found")
+        continue
+    except:
+      log ("get info for: " + f + " error")
+      continue
+  path_marq = imageDir + f + "_marq.png"  
+  path_3d   = imageDir + f + "_3d.png"  
+  path_video = imageDir + f + ".mp4"  
+  xml_doc=urllib2.urlopen(url)
+  tree = ET.ElementTree(file=xml_doc)
+  root = tree.getroot()
+  root.tag, root.attrib
+  log ("  parse xml ...", 1)
+  for jeu in root.findall('jeu'):
+    try:
+      name = jeu.find('nom').text
+      log("  Name: " + name, 1)
+      developer = jeu.find('developpeur').text
+      log("  " + developer, 2)
+      publisher = jeu.find('editeur').text
+      log("  " + publisher, 2)
+      rating    = float(jeu.find('note').text) / 20
+      log("  " + rating, 2)
+      players   = jeu.find('joueurs').text
+      log("  " + players, 2)
+    except:
+      log ("  not all Game infos present", 3)
+    try:
+      for descs in jeu.findall('synopsis'):
+        desc = descs.find('synopsis_us').text
+        log("  desc:" + desc, 2)
+    except:
+      log ("no desc found", 1)
+    try:
+      for genres in jeu.findall('genres'):
+        for genres_us in genres.findall('genres_us'):
+          genre = genres_us.find('genre_us').text
+    except:
+      log ("no genre found", 1)
+    for dates in jeu.findall('dates'):
+      try: 
+        date = dates.find('date_us').text
+      except:
+        try:
+          date = dates.find('monde').text
+        except:
+          log ("no date found", 1)
+    for medias in jeu.findall('medias'):
+      try:
+        video = medias.find('media_video').text
+        urllib.urlretrieve (video, path_video)
+      except:
+        log ("  Game: " + f + " no video found")
+      try:
+        marquee = medias.find('media_marquee').text
+        urllib.urlretrieve (marquee, path_marq)
+      except:
+        log ("  Game: " + f + " no marquee found")
+      try:
+        for mbox in medias.findall('media_boxs'):
+          for box in mbox.findall('media_boxs3d'):
+            image = box.find('media_box3d_us').text
+            urllib.urlretrieve (image, path_3d)
+      except:
+        log ("  Game: " + f + " no 3D Box found")
+ 
+
+  
+  log ("  write xml data for file: %s" % f, 1)
+  try:
+    output_file.write( """
+    <game>
+	<path>./%s.%s</path>
+	<name>%s</name>
+	<desc>%s</desc>
+	<image>%s</image>
+	<video>%s</video>
+	<marquee>%s</marquee>
+	<rating>%s</rating>
+	<releasedate>%s</releasedate>
+	<developer>%s</developer>
+	<publisher>%s</publisher>
+	<genre>%s</genre>
+	<players>%s</players>
+    </game>""" % ( f, endung, name, desc, path_3d, path_video, path_marq, rating, date, developer, publisher, genre, players))
+  except:
+    log ("ERROR: can not wirte gamelist for " + f + " in file " + gameListFile)
+
+# Close XML file
+##################################################
+output_file.write( '\n</gameList>' )
+output_file.close()
