@@ -1,8 +1,8 @@
 #Scrap XML Gamelist for ES with video support
 Attention: overwrites gamelist.xml without asking.
+with out options it scrap data for mame-libretro on retropie
 
-
-## install
+## Installation
 ```bash
 git clone https://github.com/capsaicincapsicum/videoes_scraper.git
 ```
