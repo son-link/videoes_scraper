@@ -32,3 +32,6 @@ sudo sed -i 's/\/.*emulationstation\.sh/\/home\/pi\/EmulationStation\/emulations
 
 ## Get Theme:
 http://download1336.mediafire.com/yr7ktkelzg9g/j91ai4widytm076/oldroom+1.7b+720p.zip
+
+## more infos
+https://retropie.org.uk/forum/topic/4820/video-preview-in-emulationstation
