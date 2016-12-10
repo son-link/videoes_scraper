@@ -5,6 +5,7 @@ Without options it scrap data for mame-libretro on retropie
 ## Installation
 ```bash
 git clone https://github.com/capsaicincapsicum/videoes_scraper.git
+./videoes_scraper/videoes_scraper -h
 ```
 
 ## Scrap NES Games on Retropie
