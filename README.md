@@ -2,6 +2,11 @@
 Attention: overwrites gamelist.xml without asking.
 
 
+## install
+```bash
+git clone https://github.com/capsaicincapsicum/videoes_scraper.git
+```
+
 ## Scrap NES Games on Retropie
 ```bash
 ./videoes_scraper/videoes_scraper -e nes
