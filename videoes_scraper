@@ -6,7 +6,7 @@ import urllib
 import binascii
 import glob
 import argparse
-import sys
+import sys, os
 reload(sys)
 sys.setdefaultencoding('utf8')
 
@@ -83,6 +83,12 @@ endungen["segacd"] = ["cue", "iso"]
 # ZX Spectrum
 id["zxspectrum"] = 76
 endungen["zxspectrum"] = ["sna", "szx", "z80", "tap", "tzx", "gz", "udi", "mgt", "img", "trd", "scl", "dsk"]
+# Neo Geo Pocket
+id["ngp"] = 25
+endungen["ngp"] = ["ngp"]
+# Neo Geo Pocket Color
+id["ngc"] = 82
+endungen["ngc"] = ["ngc"]
 
 # Vars
 ##################################################
@@ -110,8 +116,19 @@ romDir=args.romDir + "/" + args.emulatorDir + "/"
 log(romDir, 1)
 imageDir=args.imageDir + "/" + args.emulatorDir + "/"
 log(imageDir, 1)
-gameListFile=args.gamelistDir + "/" + args.emulatorDir + "/gamelist.xml"
+gameListDir=args.gamelistDir + "/" + args.emulatorDir
+log(gameListDir, 1)
+gameListFile= gameListDir+ "/gamelist.xml"
 log(gameListFile, 1)
+
+if not os.path.exists(romDir):
+	sys.exit('The rom dir '+romDir+' is not exists')
+
+if not os.path.exists(imageDir):
+    os.makedirs(imageDir)
+	
+if not os.path.exists(gameListDir):
+    os.makedirs(gameListDir)
 
 output_file = open( gameListFile, 'w' )
 output_file.write( '<?xml version="1.0"?>\n' )
@@ -237,7 +254,7 @@ for r in glob.iglob(romDir + "*.*"):
 	<players>%s</players>
     </game>""" % ( f, endung, name, desc, path_3d, path_video, path_marq, rating, date, developer, publisher, genre, players))
   except:
-    log ("ERROR: can not wirte gamelist for " + f + " in file " + gameListFile)
+    log ("ERROR: can not write gamelist for " + f + " in file " + gameListFile)
 
 # Close XML file
 ##################################################
